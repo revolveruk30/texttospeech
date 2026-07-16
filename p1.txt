@@ -1,0 +1,466 @@
+## Real-World Incidents
+
+In the decade since our last edition, the world of cybercrime has evolved dramatically, from attacker methodologies to the systems they compromise. The tools and disciplines of **incident response** have also changed, yet many organizations remain complacent, either ignoring the risk or blaming others for protection. *We must take ownership of the problem, because assuming solutions will come from the outside makes us less likely to solve them ourselves.* This book will help you become part of the solution by defining what constitutes an incident and explaining modern incident response through two real-world case studies.
+
+### WHAT CONSTITUTES AN INCIDENT?
+
+The National Institute of Standards and Technology (NIST) defines an **event** as "any observable occurrence in a system or network" and an **incident** as a "violation or threat of violation of computer security policies." While many organizations use this framework, it lacks sufficient technical detail for modern response. We previously defined an incident as "any unlawful, unauthorized, or unacceptable action that involves a computer system or computer network." Given the proliferation of interconnected devices, we now expand this to include cell phones, tablets, and any other electronic device with an OS or network connection. Cars, televisions, and refrigerators are now all potential targets for cybercriminals. *A mature security organization must define what constitutes an incident for itself, creating tiered responses based on severity.* This definition should be informed by a review of local laws, such as Title 18 of the U.S. Code, § 1030, which defines federal computer crimes.
+
+### WHAT IS INCIDENT RESPONSE?
+
+**Incident response** is a coordinated, structured approach to take an issue from detection to resolution, with goals and activities varying based on the incident's severity, the victim's needs, and attacker intent. In general, it comprises an investigation team to *determine what happened*, a remediation team to *remove the attacker*, and public relations to manage communications. Its activities include:
+
+*   Confirming if an incident occurred
+*   Providing rapid detection and containment
+*   Determining and documenting the incident's scope
+*   Preventing a disjointed, noncohesive response
+*   Determining and promoting facts and actual information
+*   Minimizing disruption to business and network operations
+*   Minimizing damage to the organization
+*   Restoring normal operations
+*   Managing public perception
+*   Allowing for criminal or civil actions
+*   Educating senior management
+*   Enhancing the security posture against future incidents
+
+### WHERE WE ARE NOW
+
+Computer intrusions are more complex than ever, with compromises spanning hundreds of systems globally, including attacker-controlled **hop points** used to mask their true location. Sophisticated attackers exploit network misconfigurations and modify device **access control lists (ACLs)** to gain access to restricted areas. *Malicious code is no longer OS-specific; written in universal languages like Java, it can identify the underlying OS before deploying a targeted payload.* Attackers also employ advanced antiforensic techniques, such as memory-only execution, and blend in with legitimate network traffic, which significantly increases the difficulty and cost of a comprehensive response.
+
+Incident response tools and methods have evolved to meet these new challenges, emphasizing speed, scalability, automation, and multi-OS support. **The industry is shifting from single-system analysis to tools that search for malicious activity across an entire distributed environment.** These tools automate tasks like hashing files in memory and checking persistence mechanisms. *Because modern environments shatter geographical barriers, investigative activity must be performed remotely over potentially unreliable networks, a practice known as **live response**.*
+
+The evolution of response is also driven by changes in target systems; vast storage capacities make full forensic imaging impractical, and the sheer volume of log data requires advanced parsing and normalization skills. The increasing complexity of applications necessitates collaboration with **subject matter experts (SMEs)** to avoid overlooking malicious activity. Consequently, effective incident response is a multidisciplinary effort involving legal, public relations, finance, and human resources, not just the IT and security teams.
+
+The involvement of legal and public relations teams introduces a new challenge: the tension between maintaining **Confidentiality, Integrity, and Availability (CIA)** and preserving evidence. A common impulse to minimize liability by quickly wiping compromised systems destroys critical forensic data needed to identify culprits and other victims. *The key is to balance operational continuity with the preservation of volatile evidence through timely, efficient live response.* 
+
+### WHY SHOULD YOU CARE ABOUT INCIDENT RESPONSE?
+
+Cyber-security breaches now affect virtually every industry daily, from financial services and healthcare to government and critical infrastructure. These intrusions represent the largest unlawful transfer of intellectual property in history, with criminals operating at low risk and modern conflicts increasingly fought in the cyber-domain. *Security incidents may be inevitable, but applying the lessons in this book can minimize their impact and consequence.* Constant vigilance and the sustained application of these skills are now required, making experienced and capable incident responders highly sought-after professionals in a challenging and fascinating field.
+
+### CASE STUDIES
+
+We present two case studies based on real-world incidents, with facts altered to protect victim identities, to illustrate the complexity of modern incident response. The first case details the theft of cardholder data from a financial firm, while the second shows an attacker leveraging malware for an initial foothold before pivoting to legitimate VPN access to steal sensitive data.
+
+**Case Study #1: Show Me the Money**
+
+An attacker exploited an **SQL injection** vulnerability on a web server (WEB1) located in a DMZ, which had been acquired and retained full connectivity to the internal network. Using the `xp_cmdshell` procedure with local administrator privileges on the backend database (DB1), the attacker executed malware and pivoted to an internal database (intDB1) due to a firewall misconfiguration. After moving internally, the attacker performed reconnaissance, then implanted a backdoor and cracked the local administrator password hash from intDB1, gaining widespread administrative access. To escalate further, the attacker installed keystroke-logging malware, harvested password hashes from administrator systems and a domain controller, and deployed over 20 backdoors from three distinct malware families.
+
+The primary backdoor, **BKDOOR**, was a customizable malware kit providing full system control and RDP tunneling, using RC4 for C2 encryption and persisting via **DLL search order hijacking**. Two other families were used: **PROXY** for redirecting connections and **BKDNS** for tunneling C2 traffic via DNS queries, which served as a backup on both Windows and Linux systems. Over the next few months, the attacker exfiltrated data, first targeting IT-related information like network architecture documentation. They then pivoted to financial systems, identifying where sensitive data was stored by enumerating file shares and using stolen credentials to access financial applications via RDP to understand their function. Data was exfiltrated either via an outbound FTP connection or through the backdoor's C2 channel, though attackers often compress data into archives (ZIP, RAR) and avoid large C2 transfers to evade detection.
+
+By monitoring an administrator's RDP sessions and keystroke logs, the attacker discovered a **jump server** named JMPSRV, the sole gateway to the restricted financial network. The attacker's target was **track 2 cardholder data**, which enables fraudulent "card not present" online transactions. Leveraging a compromised domain administrator account, the attacker used BKDOOR to RDP into the jump server—which only required single-factor authentication—and executed a memory-scraping tool to extract password hashes for the restricted environment. The attacker performed reconnaissance to identify 90 target systems, and because the financial environment was isolated, a complex C2 proxy chain was established: BKDOOR on target systems connected to PROXY malware on JMPSRV, which then forwarded traffic to another PROXY instance on the internet-facing mail server (MAIL), which finally connected out to the attacker's C2 server.
+
+To test data theft methods, the attacker transferred Sysinternals tools and a custom memory-dumping binary to a target system, used `pslist` to find active processes, and then dumped their memory contents for exfiltration. *As unlikely as it seems, unencrypted cardholder data often exists briefly in the memory of running processes on POS systems, a vulnerability that memory-scraping malware is designed to exploit.* The attacker then deployed `cardharvest.exe`, a custom tool that injected into running processes to scrape memory for track 2 data every 15 seconds. Over the next three months, the attacker periodically ran scripts from the jump server to stop the malware across all 90 systems, collect the output files into an encrypted archive, and exfiltrate it via the BKDOOR C2 channel.
+
+Ten months after the breach began, a system administrator noticed suspicious outbound traffic from the mail server, triggering the incident response. Our team's engagement, which lasted two months, involved immediate containment, a comprehensive investigation, and a full-scale eradication. The investigation was challenging, requiring analysis of indicators across Windows, Linux, and OS X systems, reverse-engineering multi-platform malware, and understanding a complex financial environment. *The remediation team had to develop a stringent containment plan and execute a sweeping eradication event, all while working with local IT teams to minimize the operational impact on critical financial systems.*
+
+**Case Study #2: Certificate of Authenticity**
+
+An attacker launched a **spear phishing** campaign targeting 100 users who shared a common business connection, using an email with a malicious PDF attachment. One user, Bob, opened the document with a vulnerable version of Adobe Acrobat, which successfully implanted the **GHOST RAT** backdoor before displaying a legitimate PDF to mask the compromise. Accessing the backdoor two days later, the attacker found it running with local administrator rights and, through reconnaissance, determined Bob was an engineer who used a VPN that required a username, password, and a machine certificate. The attacker cracked the local administrator password and then used `mimikatz.exe` to extract both Bob's user password and the required VPN machine certificate from memory.
+
+With the ability to authenticate to the VPN by masquerading as a legitimate user, the initial malware on Bob's system was effectively discarded, though left in place as a backup. *The attacker's own machine name (HOME3) was later discovered in a security event log on a compromised system because the attacker improperly disconnected from an RDP session instead of logging out.* VPN log analysis revealed the attacker's connection originated from a Texas-based IP address, likely a compromised third-party system used as a **hop point**. The attacker then began targeting sensitive engineering data on the SENS1 file server, using the compromised local administrator account to modify file ACLs and grant themselves access.
+
+Data was exfiltrated sporadically over four weeks: the attacker would package files into an encrypted RAR archive, disguise it as a .CAB file, and upload it via FTP. To cover their tracks, they would delete the archive and run the Windows defragmentation utility in an attempt to thwart forensic recovery. The company's deployment of a new **Security Information and Event Management (SIEM)** tool during this period quickly flagged anomalous activity when it detected Bob's account logging into the VPN from multiple IPs and systems at the same time. After security staff disabled Bob's account, the attacker immediately pivoted to using a second compromised user account (Mary), which the SIEM also detected, triggering a formal incident response. *Our investigation linked one of the attacker's VPN source IPs to the original GHOST RAT C2 server, which allowed us to identify the initial point of compromise and ensure it was included in the remediation plan.*
+
+Two days after a comprehensive eradication event, the SIEM detected the attacker's IP attempting OWA access, revealing that a mandatory password change had not been fully adopted by all users. A second, more aggressive enterprise-wide password change was initiated, disabling non-compliant accounts within 24 hours and successfully severing the attacker's remaining access. This investigation was notable because the attacker relied almost exclusively on legitimate VPN access rather than deploying multiple backdoors, making malicious activity difficult to distinguish from normal user behavior. Unlike the first case, which required a full environmental scan, this investigation was more targeted, following leads from VPN activity to specific systems.
+
+### CONCEPT OF THE ATTACK LIFECYCLE
+
+We use the concept of the **attack lifecycle** to frame intrusions within seven common stages, though not all stages are always present or occur in a fixed order. *Thinking about discovered activity within this lifecycle provides context and ensures that remediation plans address attacker actions at every phase of the compromise.*
+
+*   **Initial compromise:** The attacker successfully executes malicious code. In case #1, this was an SQL injection attack; in case #2, it was a spear phishing e-mail with an infected PDF.
+*   **Establish foothold:** The attacker ensures persistent remote access to a compromised system. In case #1, backdoor malware was installed internally; in case #2, the infected PDF installed GHOST RAT.
+*   **Escalate privileges:** The attacker obtains greater access to systems and data. In case #1, this involved password hash dumping and cracking domain admin passwords; in case #2, the attacker cracked a local admin password and compromised multiple user accounts with VPN access.
+*   **Internal reconnaissance:** The attacker explores the environment to understand it and locate key data. In both cases, attackers manually explored user directories and used command-line tools to enumerate file shares and discover services.
+*   **Move laterally:** The attacker uses the established foothold to move from system to system. In both cases, attackers used RDP connections and mapped network shares to navigate the environment.
+*   **Maintain presence:** The attacker ensures continued access to the victim environment. In case #1, the attacker implanted multiple variants of two different backdoor families; in case #2, the attacker compromised multiple user accounts and their machine certificates for redundant VPN access.
+*   **Complete mission:** The attacker accomplishes their goal, which is typically data theft. In case #1, the attacker stole cardholder data; in case #2, the attacker stole data about a sensitive project.
+
+### SO WHAT?
+
+Cyber attacks are the new normal; it is not a matter of if you will be compromised, but when. Being armed and prepared is the only effective strategy, and the time you invest in learning these procedures will prove invaluable. *As an incident responder, your job is to think through these complex scenarios, provide confident answers during a crisis, and continuously learn, because hindsight is always 20/20.*
+
+## IR Management Handbook
+
+Preparing for and responding to a computer security incident is challenging, but many of its core difficulties are nontechnical. *The fundamental principles of investigating a computer security incident do not differ from a nontechnical investigation.* This guide focuses on what is truly important for building a solid incident response program, covering the basics, the investigation lifecycle, and critical information tracking. Organizations that spend time thinking about these areas perform incident response activities with much more success than those who do not.
+
+### WHAT IS A COMPUTER SECURITY INCIDENT?
+
+Defining what a **computer security incident** is establishes your team's scope and provides focus. While there is no single accepted definition, we consider it to be any event that has the following characteristics:
+*   Intent to cause harm
+*   Was performed by a person
+*   Involves a computing resource
+
+The first two characteristics align with common nontechnology incidents like arson or theft; without intent, it is difficult to classify an event as an incident. This intent to cause harm, however, may not result in *immediate* harm, such as a malicious vulnerability scan. The requirement for a person's involvement excludes events like random system failures or weather, unless a person caused the event or takes advantage of it.
+
+The final characteristic is the involvement of a **computing resource**, a broad term that includes often-overlooked items like backup media, phones, building access cards, two-factor tokens, and TVs. **Since it may not be clear that an event is an incident until an initial response is performed, *suspicious events should be viewed as potential incidents until proven otherwise.*** Common examples of computer security incidents include:
+*   Data theft, including sensitive personal information, e-mail, and documents
+*   Theft of funds, including bank access, credit card, and wire fraud
+*   Extortion
+*   Unauthorized access to computing resources
+*   Presence of malware, including remote access tools and spyware
+*   Possession of illegal or unauthorized materials
+
+### WHAT ARE THE GOALS OF INCIDENT RESPONSE?
+
+*The primary goal of incident response is to effectively remove a threat from the organization's computing environment while minimizing damages and restoring normal operations as quickly as possible.* This is accomplished through two main activities:
+
+**Investigate**
+* Determine the initial attack vector
+* Determine malware and tools used
+* Determine what systems were affected, and how
+* Determine what the attacker accomplished (damage assessment)
+* Determine if the incident is ongoing
+* Establish the timeframe of the incident
+
+**Remediate**
+* Using the information from the investigation, develop and implement a remediation plan.
+
+### WHO IS INVOLVED IN THE IR PROCESS?
+
+Incident response (IR) is a multifaceted discipline that requires resources from many operational units, including HR, legal, IT, public relations, and business managers. During an IR event, companies assemble teams for investigation and remediation, led by an experienced **incident manager**. *The incident manager must have the authority to direct other business units and obtain information in a timely manner*, and is often the CIO, CISO, or their direct appointee.
+
+Most organizations use a tiered approach, with a **core investigative team** often consisting of senior IT staff with experience in log review, forensics, and malware triage. This core team, which may include external consultants, must have the authority to access log repositories and system configurations to find relevant material. Ancillary teams—including counsel, compliance officers, IT support, and public relations—are assembled as needed to perform task-oriented requests from the incident manager. *The worst time to learn about requirements from counsel or your compliance people is in the middle of an investigation*, so these relationships and expectations must be established in advance. Understand what systems fall under compliance scope and what the reporting requirements and thresholds are for your industry.
+
+### THE INCIDENT RESPONSE PROCESS
+
+The incident response process consists of all activities necessary to accomplish IR goals, and should be well documented and understood by the team and stakeholders. The process has three main activities: **Initial response**, **Investigation**, and **Remediation**. Investigation and remediation efforts are often executed concurrently, with the investigation team generating "leads" that are immediately useful to the remediation team.
+
+### Initial Response
+
+The main objectives of this step are to assemble the response team, review available data, *determine the incident type*, and assess the potential impact. This phase typically does not involve collecting data directly from an affected system, but rather examines network logs and other historical evidence to provide context. *For example, a banking trojan found on the CFO’s laptop warrants a very different response than if it is found on a receptionist’s system.* Common tasks include:
+*   Interviewing the person(s) who reported the incident.
+*   Interviewing IT and business unit personnel for technical and business context.
+*   Reviewing network and security logs to support that an incident occurred.
+*   Documenting all information collected from all sources.
+
+### Investigation
+
+The goal of an investigation is to determine facts about what happened and how it happened. **Without knowing how an attacker gained access or what they did, you are not in a good position to remediate.** We've developed a five-step iterative process that promotes an effective investigation.
+
+<center>Initial Leads → IOC Creation → Deploy IOCs → Identify Systems of Interest → Collect Evidence → Analyze Data → (Iterate)</center>
+
+*During an investigation, you must weigh the risk of acting on incomplete information versus the risk of allowing the attacker further opportunity to cause harm.* Our experience is that it is often important to perform additional fact-finding to make an appropriate decision, as taking action on inaccurate information is far more risky.
+
+### Initial Leads
+
+An investigation without leads is a fishing expedition, so their collection is a critical first step. A common misstep is focusing only on finding malware, when an attacker's goal may be to steal data, capture passwords, or disrupt the network. *Once an attacker has valid credentials, they do not need to use malware to access additional systems.* The focus must be on developing valid leads and avoiding irrelevant "shiny objects." Good leads share three common characteristics:
+*   **Relevant:** The lead pertains to the current incident, avoiding the common trap of categorizing any suspicious activity as part of the incident.
+*   **Detailed:** The lead has specifics—who, what, when, where, why, and how. An alert that a computer communicated with a malware-hosting site is not very specific without a timestamp and IP addresses.
+*   **Actionable:** The lead contains information you can use, and your organization has the means to follow it. A lead about data exfiltration is not actionable if you lack the network logs to trace the activity to a specific internal system.
+
+### Indicators of Compromise (IOC) Creation
+
+**IOC creation** is the process of documenting incident characteristics and artifacts—such as file names, IP addresses, login events, and persistence mechanisms—in a structured manner. The goal of IOCs is to effectively describe, communicate, and find artifacts related to an incident. Network IOCs are commonly represented as Snort rules, while host-based IOC formats can be represented with YARA.
+
+### IOC Deployment
+
+Documenting IOCs is useful, but their real power is enabling IR teams to find malicious activity in an automated fashion across the enterprise. Your organization must possess a capability to deploy and search for IOCs. While network-based IOC deployment is straightforward with Snort, *there is a major deficiency in the industry for host-based IOCs: there is no single, free, enterprise-grade accepted standard and toolset equivalent to Snort.* YARA is mature but malware-focused, while OpenIOC and CybOX are more comprehensive but lack mature, widely-accepted, or free enterprise-grade tools.
+
+### Identify Systems of Interest
+
+After deploying IOCs, you will get "hits," which are matches to a given rule. You must review the matching information to determine if a hit is valid, as some hits have low confidence or may be false positives. Once a system is identified, you should perform an initial triage to keep the investigation focused:
+*   **Validate:** Examine the initial details. If an IOC matches only a file's name, could it be a false positive?
+*   **Categorize:** Assign the system to a helpful category. Avoid vague terms like "Compromised" and instead use descriptive labels like "Backdoor Installed," "Credential Harvesting," or "Data Theft."
+*   **Prioritize:** Assign a priority for further action based on investigative factors, not just business factors. A system showing a *new* type of malware may be a higher priority for analysis than another system showing the same malware you've already seen, regardless of the system's business role.
+
+### Preserve Evidence
+
+Once systems are identified, you must collect additional data for analysis using a process that minimizes system changes and is well-documented. *For each new system, you must decide what type of evidence to collect, as it doesn't make sense to collect large volumes of data that may never be examined.* The typical evidence preservation categories are:
+*   **Live response:** This is the most common collection process, using an automated tool to collect volatile and nonvolatile data like process lists, network connections, event logs, and registry contents. It rapidly provides answers to investigative questions.
+*   **Memory collection:** Most useful when you suspect an attacker is using a rootkit or memory-resident malware, but it has limited benefits for answering high-level investigative questions about how an attacker got in or what they did.
+*   **Forensic disk image:** A complete duplication of a system's hard drive, collected in a "live" mode. Because images are large and time-consuming to analyze, they are normally collected only when there is a specific need, such as in cases with a long timeline or when other evidence is not helpful.
+
+### Analyze Data
+
+This is the process of examining the preserved evidence to answer investigative questions, with results documented in a formal report. The three major data analysis areas are:
+*   **Malware analysis:** A dedicated team examines suspected malware files to produce reports on their functionality and create new IOCs. Organizations should at least consider investing in a basic triage capability.
+*   **Live response analysis:** A critical step to find more leads and explain what happened on a system. Missing details at this stage could cause you to overlook attacker activity or dismiss a system entirely.
+*   **Forensic examination:** During an IR, a forensic examination is a very focused, time-sensitive task used to answer a handful of realistic questions. This is different from a traditional, more methodical forensic examination where the goal is to discover all information that supports or refutes an allegation.
+
+### Remediation
+
+Remediation plans vary greatly based on the incident's impact and must account for legal, business, and technical factors. *The best time to begin remediation is when your detection methods enter a steady state, meaning your IOCs stop alerting you to new, unique events.* We recommend starting remediation planning as early as possible and defining activities for three areas:
+*   **Posturing:** Taking steps to ensure the success of remediation, such as establishing protocols, exchanging contact info, and coordinating timelines.
+*   **Tactical (short term):** Actions to address the current incident, like rebuilding systems, changing passwords, and blocking IP addresses.
+*   **Strategic (long term):** Long-term improvements to address security problems uncovered during the incident. These should be put on a to-do list and addressed after the incident is over to maintain focus.
+
+### Tracking of Significant Investigative Information
+
+Staying organized is a major nontechnical challenge in incident response. Your investigation needs a mechanism to easily track and share critical information with teams and leadership. Establish an incident numbering system and use it to document key data points in near-real time, which will become the "ground truth" for the investigation's status.
+
+*The anecdote of uncovering 200 compromised systems in a small network underscores that you must always document significant information during an incident, no matter how large or small.*
+
+Key information to track includes:
+*   List of evidence collected (with chain of custody)
+*   List of affected systems
+*   List of any files of interest
+*   List of accessed and stolen data
+*   List of significant attacker activity
+*   List of network-based and host-based IOCs
+*   List of compromised accounts
+*   List of ongoing and requested tasks for your teams
+
+### Reporting
+
+Reports are a fundamental deliverable for both consultants and internal teams. Creating good reports takes time, but without them, it is easy to lose track of findings, and high-level summaries may be difficult to communicate without proper documentation. *Reporting forces you to slow down, document findings in a structured format, verify evidence, and think about what happened, which ultimately makes you a better investigator.*
+
+### SO WHAT?
+
+The information presented here should help managers establish or update their incident response capabilities. The following checklist contains the tasks you should consider first:
+*   Define what a "computer security incident" means in your organization.
+*   Identify critical data, including where it is stored and who is responsible for it.
+*   Create an incident tracking process and system for identifying distinct incidents.
+*   Understand the legal and compliance requirements for your organization.
+*   Define the capabilities you will perform in-house versus what will be outsourced.
+*   Create formal documentation templates for the incident response process.
+*   Create procedures for evidence preservation on common operating systems.
+*   Implement network-based and host-based solutions for IOC creation and searching.
+*   Establish reporting templates and guidelines.
+*   Create a mechanism or process to track significant investigative information.
+## Pre-Incident Preparation
+
+*The chances of a successful investigation are low unless an organization commits resources to pre-incident preparation.* This preparation creates the infrastructure needed to methodically investigate and remediate, ensuring your team is ready to collect, analyze, and report information. An effective response must address the common questions posed during an incident:
+
+*  What exactly happened? 
+*  What is the damage and how did the attackers get in?
+*  Is the incident ongoing?
+*  What information was stolen or accessed?
+*  What resources were affected by the incident?
+*  What are the notification and disclosure responsibilities?
+*  What steps should be performed to remediate the situation?
+*  What actions can be taken to secure the enterprise from similar incidents?
+
+An investigation is inherently challenging, as is extracting data and managing communications without proper preparation. We will cover three high-level areas to help you make preparations that significantly contribute to a successful investigation:
+*   **Preparing the organization:** This includes identifying risk, creating policies for a successful IR, working with outsourced IT, addressing global infrastructure concerns, and providing user education.
+*   **Preparing the IR team:** This involves defining communication procedures and providing resources such as hardware, software, training, and documentation.
+*   **Preparing the infrastructure:** This covers asset management, instrumentation, documentation, investigative tools, segmentation, and network services.
+
+### PREPARING THE ORGANIZATION FOR INCIDENT RESPONSE
+Many organizations focus on technical security solutions because securing budget is often easier than finding skilled personnel or committing to self-improvement. *However, investigations are regularly hindered by significant nontechnical organizational challenges.* This section covers the most common challenge areas:
+*   Identifying risk
+*   Policies that promote a successful IR
+*   Working with outsourced IT
+*   Thoughts on global infrastructure issues
+*   Educating users on host-based security
+
+### Identifying Risk
+The initial step of pre-incident preparation is to understand your corporate risk by identifying critical assets, their exposure, the threat, and any regulatory requirements. **Identifying risk ensures you spend resources preparing for incidents most likely to affect your business.** **Critical assets** are those areas vital to the continued success of the organization, such as:
+
+*   **Corporate reputation:** Do consumers choose your products due to their confidence in your ability to keep their data safe?
+*   **Confidential business information:** Do you have critical marketing plans, source code, patents, or other intellectual property?
+*   **Personally identifiable information (PII):** Does your organization store or process PII data?
+*   **Payment account data:** Does your organization store or process PCI data?
+
+Critical assets produce the greatest liability or potential loss through exposures in your people, processes, or technology. By combining these factors—criticality, exposure, and who can exploit them—you can prioritize your risk. *Assets that introduce the most risk should receive the most resources; not every resource needs to be secured at the same level.*
+
+### Policies That Promote a Successful IR
+Every step an IR team takes is impacted by policies that must be in place long before an incident. These policies are typically written by legal counsel in cooperation with the CISO and compliance officers. Typical policies include:
+
+*   **Acceptable Use Policy:** Governs the expected behavior for every user.
+*   **Security Policy:** Establishes expectations for the protection of sensitive data and resources, addressing physical, electronic, and data security.
+*   **Remote Access Policy:** Establishes who can connect to the organization's resources and what controls are placed on those connections.
+*   **Internet Usage Policy:** Establishes appropriate use of general Internet resources, including expectation of privacy and notification of monitoring.
+
+The IR team should be most concerned with policies that address expectations on the **search and seizure of company-owned resources** and **interception of network traffic**. If these areas are covered, the team can perform most investigative actions, but must always be aware of local privacy laws that can vary significantly by location.
+
+### Working with Outsourced IT
+In many organizations, at least some IT functions are outsourced, which can create challenges during an investigation. Requesting work from an outsourced provider may require project plans or approvals, incur additional costs, or fall outside the scope of the contract. *These challenges can prevent an investigation from moving forward effectively.* Organizations should work with their providers to establish **Service Level Agreements (SLAs)** for responsiveness to critical requests and create options to perform out-of-scope work to avoid being helpless in an emergency.
+
+### Thoughts on Global Infrastructure Issues
+Investigating incidents at large multinational organizations presents unique challenges, particularly when crossing international borders.
+
+#### Privacy and an Labor Regulations
+An organization's network may span multiple countries, each with its own privacy laws and labor regulations. *It's easy to get into trouble if the methods you use to search for indicators of compromise violate local laws.* Before beginning an investigation that crosses borders, you must consult with the organization's legal counsel in each country to determine what actions are permissible.
+
+#### Team Coordination
+With incidents spanning the globe, coordination is a significant challenge due to personnel and resources spread across many time zones. Careful planning is required to ensure everyone is in sync, as getting tasks done may take longer. *Tracking tasks and performing handoffs are critical to ensuring acceptable progress is made.*
+
+#### Data Accessibility
+Investigations often require collecting and transferring massive amounts of data, like hard disk images, to a core analysis team. You must find an efficient way to transfer this data while being mindful of customs or other restrictions in the source and destination countries. The greatest challenge is often the delay in getting data into the right hands; if there is any question whether data needs to be transferred, begin the process immediately to avoid losing days to indecision.
+
+### Educating Users on Host-Based Security
+Users play a critical role in overall security, as their actions can often circumvent the best security plans. User education should be a key part of pre-incident preparation, teaching them what actions to take and not take from a security and response perspective. Users should be educated on proper response to suspected incidents, which typically means immediately notifying a designated contact and taking no investigative actions that could destroy evidence. A specific danger to address is unauthorized server software (e.g., web or FTP servers) installed by users, which jeopardizes overall security.
+
+### PREPARING THE IR TEAM
+The core IR team is composed of multiple disciplines, including IT, investigators, forensic examiners, and external consultants. The groundwork for team development involves defining the mission, communication protocols, deliverables, and necessary resources.
+
+### Defining the Mission
+Defining the mission of your IR team helps keep it focused and sets expectations with the rest of the organization. *All elements of the team's mission must be fully endorsed and supported by top management for the team to be effective.* The team’s mission may include a variety of goals:
+
+*   Respond to all security incidents using a formal investigative process.
+*   Conduct complete, impartial investigations.
+*   Quickly confirm or dispel whether an intrusion occurred.
+*   Assess the damage and scope of an incident.
+*   Control and contain the incident.
+*   Collect and document all related evidence.
+*   Select additional support when needed.
+*   Protect privacy rights established by law or policy.
+*   Liaise with law enforcement and legal authorities.
+*   Maintain confidentiality to protect the organization from unnecessary exposure.
+*   Provide expert testimony.
+*   Provide management with recommendations supported by facts.
+
+### Communication Procedures
+During an incident, multiple teams work concurrently, making good communication paramount. This section discusses defining tactical and ad-hoc communication protocols before an incident begins.
+
+### Internal Communications
+In many recent investigations, attackers have targeted e-mail servers, retrieving C-level and senior IT mailboxes and searching for strings related to the investigation. *The threat of attackers watching you watch them is not theoretical.* Keep the following **Communications Security (ComSec)** issues in mind:
+
+*   **Encrypt e-mail:** Procure **S/MIME** or **PGP** certificates for core and ancillary IR teams before an incident. Your IT department may be able to issue certificates at no direct cost.
+*   **Properly label communications:** Use phrases like “Privileged & Confidential” or “Attorney Work Product” as directed by legal counsel.
+*   **Monitor conference call participation:** Use a system that allows you to see who has called in and disconnect unverified parties.
+*   **Use case numbers or project names:** Refer to investigations by project names to keep details out of hallway conversations and meeting invites, minimizing the number of people with details about a security lapse.
+
+### Communicating with External Parties
+With the growth of governance and legislation, it is highly likely your organization will need to communicate with third parties after an incident. *Planning for potential disclosure is a process that must involve legal counsel, compliance officers, and C-level personnel.* Once disclosure occurs, you may lose control of the investigation, as other entities may use contracts to demand actions that protect their interests over yours. Key questions to consider are:
+*   When does an incident meet a reporting threshold?
+*   How is a notification passed to the third party?
+*   If public disclosure is warranted, who is responsible for it?
+*   What penalties or fines are levied post-disclosure?
+*   What investigative constraints are expected after disclosure?
+*   How does disclosure affect remediation?
+
+### Deliverables
+It is important for any IR team to define the standard items they will produce. The most important deliverables are investigative reports, which can range from one-page status updates to detailed forensic reports. Your IR team should explicitly define its primary deliverables with target completion time frames, creating templates to ensure consistency.
+
+| Name                               | Purpose                                                                                               |
+| :--------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| **Case Status Report**             | Update stakeholders on progress of an individual case.                                                |
+| **Live Response Report**           | Document findings from initial live response triage of a single system.                               |
+| **Forensic Examination Report**    | Document detailed findings from forensic analysis on an item of evidence.                             |
+| **Malware Analysis Report**        | Document findings from analysis of suspected malicious software.                                      |
+| **Intrusion Investigation Report** | Consolidate all reports and findings for a single incident and create a high-level executive summary. |
+
+### Resources for the IR Team
+To be successful, an IR team needs resources, including training, documentation, and unique hardware and software.
+
+### Training the IR Team
+The importance of good training cannot be overemphasized, and classes providing hands-on incident response training are well worth their cost. Select universities and the SANS Institute offer high-quality programs in IR and computer forensics.
+
+### Hardware to Outfit the IR Team
+Modern hardware makes performing forensic and IR tasks easier on commodity systems. During an incident, you will be handling sensitive data that must be protected with encryption. There are two high-level categories where sensitive data might rest:
+
+*   **Permanent, internal media:** This includes internal hard drives. The most common solution is software-based **full disk encryption (FDE)**, but hardware-based FDE, or a **Self-Encrypting Drive (SED)**, is another, albeit more expensive, option.
+*   **External media:** This includes portable USB drives and external hard drives. Solutions include both software (like Truecrypt) and hardware (in-line USB and SATA encryptors).
+
+Many incidents require forensic work on-site, making a well-equipped laptop the main platform. 
+
+### Software for the IR Team
+This section covers general categories of software an IR team will need.
+
+When choosing solutions, it usually comes down to time; we choose the tool that gets the job done in the least amount of time, factoring in preparation, execution, and reporting. *Time is important because it allows us to find evil faster and our customers pay by the hour.* It is also wise to have options, maintaining at least two tools for any given function in case one does not work in a specific situation.
+
+The software used during investigations falls into eight categories:
+*   **Boot disks:** "Live" media (CD or USB) like Backtrack, CAINE, or Helix that provide bootable environments for IR or forensic tasks.
+*   **Operating systems:** The IR team should be familiar with each OS used in the organization, maintaining virtual machines for testing and procedure development.
+*   **Disk imaging tools:** Maintain an authorized list of imaging tools, referencing the NIST Computer Forensic Tool Testing site.
+*   **Memory capture and analysis:** Have a number of reliable and tested memory-capture tools available for the different operating systems in your environment.
+*   **Live response capture and analysis:** Create and test a live response toolkit for each OS used within your organization.
+*   **Indicator creation and search utilities:** You will need tools to create and search for **Indicators of Compromise (IOCs)** throughout an investigation.
+*   **Forensic examination suites:** These suites provide a comprehensive set of features for analyzing disk images, interpreting data formats, and performing searches.
+*   **Log analysis tools:** During investigations, teams face vast amounts of log files. While many tools can handle plain text, you may need specific tools for proprietary formats or the "big data" volumes of modern log archives.
+
+### Documentation
+Documentation in this context refers to the IR team's policy, procedures, and knowledge management.
+
+### Evidence Handling
+*Evidence is the source of findings for any investigation and must be handled appropriately to maintain its integrity.* Implement an evidence-handling policy that includes guidance on collection, documentation, storage, and shipment. At a minimum, you need procedures to enforce **integrity**, **authentication**, and **verification**.
+*   **Integrity** is achieved through **positive control**, meaning evidence is always under direct supervision or secured in a controlled environment.
+*   **Authentication** is accomplished through documentation like an evidence tag and a **chain of custody**.
+*   **Validation** is done using a cryptographic checksum (e.g., MD5) computed at the time of collection to prove the evidence has not changed.
+
+### Internal Knowledge Repository
+As your IR team performs investigations, they will accumulate knowledge that should be documented in a central location. This knowledge repository, which may be a ticketing or case management system, should be logically organized and searchable so the team can effectively locate relevant information from past and current incidents.
+
+### PREPARING THE INFRASTRUCTURE FOR INCIDENT RESPONSE
+*Good information security practices and change management procedures promote rapid response and ease the remediation process.* The IR team should have the ability to acquire data and search for relevant material across the enterprise as easily as it does on a single machine. We see organizations struggle in two broad categories: computing devices and networking.
+
+### Computing Device Configuration
+Computing devices harbor the majority of relevant evidence, and their configuration can drastically affect an investigation's outcome. Your organization should configure all systems to facilitate an effective investigation, not just the ones perceived as "critical." *It is common for an attacker to use unrelated systems as a base of operations, creating artifacts on noncritical systems that can be missed if you only focus on the target.* To ensure you cover all aspects, consider these two steps:
+1.  **Understand what you have:** *It is difficult to protect systems you don't know exist*. Implement a comprehensive asset management system and perform a survey to discover what is actually in production.
+2.  **Improve and augment:** Ensure systems are configured to help an investigation through proper log settings, investigative tool deployment, and other enhancements.
+
+### Asset Management
+Although often overlooked, asset management is crucial for incident preparation. Accomplishing investigative goals requires knowing precisely what systems belong to a department and where they are located. You should evaluate your organization's ability to provide the following information about a system:
+*   **Date provisioned:** Helps determine if a current system contains evidence from past activity or if an old server needs to be located.
+*   **Ownership:** If a system is not owned by your organization (e.g., outsourced), it may affect how you can respond.
+*   **Business unit:** Knowing the business unit helps build context; a database server for a regulated business unit changes how you react.
+*   **Physical location:** Necessary for obtaining a hard drive image or taking other actions requiring physical access.
+*   **Contact information:** A primary and secondary contact list is needed to coordinate access and notify stakeholders.
+*   **Role or services:** Knowing the system's role (e.g., a 16TB SAN database server vs. a laptop) influences decisions on how to proceed.
+*   **Network configuration:** The hostname, IP configuration, and MAC address for each interface should be tracked.
+
+### Performing a Survey
+Standard documentation rarely provides a complete picture of an IT infrastructure, and surprises are common during investigations. We recommend performing a hands-on survey to gather and verify information on all hardware, software, and operating systems in use. Be sure to include manufacturer, product, and version information for items like:
+*   Operating systems (Windows, Mac OS X, Linux, etc.)
+*   Hardware (laptops, desktops, servers, mobile devices)
+*   Networking technologies (switches, firewalls, IDS)
+*   Network diagram
+*   Security software (AV, HIPS, whitelisting)
+*   IT management software
+*   Endpoint and business applications
+
+### Instrumentation
+To facilitate an investigation, you must consider what can be logged, captured, or otherwise recorded to help develop and follow leads. Think about existing instrumentation like software metering or AV and how it can be improved, then look into new areas like investigative tools.
+
+**Event, Error, and Access Logs** are an invaluable resource in nearly every investigation. A centralized logging system is a major contributor to an effective investigation, but presents challenges in collection, storage, retention, and correlation. We generally recommend retaining log data for at least a year, but for high-volume environments, you may need to determine a subset of information to preserve for longer. 
+
+During investigations, we find that organizations often have poorly configured OS logging and have completely overlooked application logging. For **Windows**, default installations do not enable sufficient auditing. We recommend configuring baseline images to:
+*   Increase auditing to include log-on/off, user/group management, and process creation/termination events.
+*   Increase local storage for each event log to a minimum of 100MB (ideally 500MB).
+*   Forward all events to a centralized logging system.
+
+For **Unix**, which tends to log more relevant details by default, we recommend:
+*   Enabling process accounting when feasible.
+*   Increasing local storage.
+*   Forwarding all events to a centralized logging system.
+
+**Antivirus and Host Intrusion Prevention Systems (AV/HIPS)** should be configured to help, not hinder, an investigation. For example, if the solution does not log events to a central server, you have no way to review detections across the enterprise. *Furthermore, setting the solution to delete malware on detection also destroys evidence; quarantining to a central location provides an opportunity for analysis*. Be wary of solutions that automatically transmit suspicious binaries to a vendor, as targeted malware may contain unique information about your environment, and the vendor may release a cleaning signature before you are ready.
+
+**Investigative Tools** provide the critical ability to reach out to systems and ask questions like, "What other systems in my environment have this artifact?" An accurate answer helps properly **scope the incident**. Ideally, tools like AccessData Enterprise, Guidance Software EnCase Enterprise, or Mandiant Intelligent Response are part of the standard build for every system.
+
+### Additional Steps to Improve Security
+The following steps will improve the overall security posture of individual systems and positively affect investigations:
+*   Establish a patching solution for operating systems and applications.
+*   Consider two-factor authentication and enforce good password complexity.
+*   Remove local administrative access from users.
+*   Ensure systems have firewalls and AV deployed and configured appropriately.
+*   Decommission end-of-life systems.
+*   Establish a configuration management system.
+*   Consider application whitelisting.
+*   Conform with DISA STIGs and follow NSA IA mitigation guidance.
+
+### Network Configuration
+Designing a secure networking environment can greatly enhance an IR team's ability to perform investigations. The four topics we will discuss are:
+*   Network segmentation and controls
+*   Documentation
+*   Instrumentation
+*   Network services
+
+### Network Segmentation and Access Control
+A common best practice is the segmentation of a network based on the information processed or the role of the systems. Suborganizations should be segmented into their own zones, with filtering to permit only necessary traffic. For example, the Finance zone's servers require a high degree of confidentiality, so controls would minimize traffic and require strong authentication for all access.
+
+Many essential controls are difficult to represent on diagrams. At this level, three controls are considered essential:
+*   **Traffic filtering at the suborganization level:** Ingress *and* egress filtering are absolutely essential to impede an intruder's access across the enterprise.
+*   **Web, chat, and file transfer proxies:** Traffic to external resources should pass through proxies capable of monitoring, filtering, and logging.
+*   **Two-factor authentication for connections crossing significant borders:** Most organizations apply this to internet VPN traffic, but it should also be required for internal resources like servers, administrative workstations, and **"jump boxes."**
+
+### Documentation
+*Maintaining accurate and current network diagrams is a tough but essential task for the IT and networking teams.* The IR team uses these documents continually to determine risk, scope, and remediation measures. A series of diagrams at various levels, from high-level gateway designs to detailed system layouts, allows an IR team to determine where compromised systems reside and the risk they pose. Storing an archive of device configurations (routers, firewalls) is also crucial, as it allows the IR team to validate any suspicious changes or suspected tampering.
+
+### Instrumentation
+What can be logged, captured, or otherwise recorded on the network to help an investigation? The most common sources of logging and monitoring are:
+*   **Firewalls:** Events should be logged to a location that promotes searching and retention.
+*   **Intrusion detection systems:** Your IR team should have access to review alerts and submit additional indicators to the IDS.
+*   **Full-content capture systems:** Periodically, you may need to capture an entire session. This can be as simple as turning on a SPAN/port-mirroring function or deploying a hardware network tap.
+*   **Netflow emitters:** At common gateways and internal switches, collecting netflow statistical data can help identify compromised systems and give a sense of how stolen data may be moving.
+*   **Proxy servers:** If all outbound traffic is forced through authenticated proxies, logs can be used to examine communications, detect data movement, and trace requests back to internal systems and users.
+
+### Network Services
+When designing a network to be IR-friendly, configure DNS and DHCP servers for extensive logging. Ensure DHCP servers retain assignment logs for at least a year, as source IP addresses in other logs are useless if you cannot determine which system had that address at the time.
+
+### Implementing a DNS Blackhole
+Your DNS system can be one of the most useful tools to track and impede an attacker's use of backdoor malware. A **DNS blackhole** occurs when you redirect an entire malicious domain or subdomain to a nonexistent or managed IP address. For example, to block "pwn.ie", you can create a zone file that points all requests for that domain to 127.0.0.1 or, for a better option, to a system dedicated to capturing the malicious traffic.
+
+### SO WHAT?
+As the old saying goes, “An ounce of prevention is worth a pound of cure.” This chapter presented information to help you prepare your organization, IR team, and infrastructure to better deal with an incident. With an organization that understands its risks, a well-equipped team, and a properly designed architecture, responding to an incident will be much less painful. *However, once you've prepared, we recommend you perform "dry runs" of your processes, because waiting for an incident to happen to "see how things go" is not likely to end well.*
